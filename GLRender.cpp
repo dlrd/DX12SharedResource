@@ -88,79 +88,9 @@ static bool checkGLErrors()
 #endif // !_DEBUG
 }
 
-static void activateContextDebugging()
-{
-  struct StaticOwner
-  {
-    static void GLAPIENTRY debugCallback(GLenum source,
-      GLenum type,
-      GLuint id,
-      GLenum severity,
-      GLsizei length,
-      const GLchar* message,
-      const void* userParam)
-    {
-      const char* debugSource;
-      const char* debugType;
-      const char* debugSeverity;
-      switch (source)
-      {
-      case GL_DEBUG_SOURCE_API_ARB: debugSource = "OpenGL"; break;
-      case GL_DEBUG_SOURCE_WINDOW_SYSTEM_ARB: debugSource = "Windows"; break;
-      case GL_DEBUG_SOURCE_SHADER_COMPILER_ARB: debugSource = "Shader Compiler"; break;
-      case GL_DEBUG_SOURCE_THIRD_PARTY_ARB: debugSource = "Third Party"; break;
-      case GL_DEBUG_SOURCE_APPLICATION_ARB: debugSource = "Application"; break;
-      case GL_DEBUG_SOURCE_OTHER_ARB:
-      default:
-        debugSource = "Other";
-      }
-
-      switch (type)
-      {
-      case GL_DEBUG_TYPE_ERROR_ARB: debugType = "Error"; break;
-      case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB: debugType = "Deprecated behavior"; break;
-      case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB: debugType = "Undefined behavior"; break;
-      case GL_DEBUG_TYPE_PORTABILITY_ARB: debugType = "Portability"; break;
-      case GL_DEBUG_TYPE_PERFORMANCE_ARB: debugType = "Performance"; break;
-      case GL_DEBUG_TYPE_OTHER_ARB:
-      default:
-        debugType = "Other"; break;
-      }
-
-      switch (severity)
-      {
-      case GL_DEBUG_SEVERITY_HIGH_ARB: debugSeverity = "High"; break;
-      case GL_DEBUG_SEVERITY_MEDIUM_ARB: debugSeverity = "Medium"; break;
-      case GL_DEBUG_SEVERITY_LOW_ARB: debugSeverity = "Low"; break;
-      default:
-        debugSeverity = "Other"; break;
-      }
-
-      std::cerr << debugSource << " " << debugType << " " << debugSeverity << " " << message;
-      if (type == GL_DEBUG_TYPE_ERROR_ARB || type == GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB || type == GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB || type == GL_DEBUG_TYPE_PORTABILITY_ARB)
-      {
-        assert_false;
-      }
-    }
-  };
-
-  glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
-  GL_CALL(glDebugMessageControlARB, GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);  // activate all debug output
-  GL_CALL(glDebugMessageCallbackARB, StaticOwner::debugCallback, nullptr);
-}
-
-static void deactivateContextDebugging()
-{
-  glDisable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
-  GL_CALL(glDebugMessageCallbackARB, nullptr, nullptr);
-}
-
-bool GLRender::Init(DX12SharedData* pSharedData)
+static HGLRC createAndActivateGLContext(HDC hDC)
 {
   // Init GL windows device context PixelFormat
-  this->pSharedData = pSharedData;
-  hDC = GetDC(pSharedData->hWnd);
-  assert(hDC);
   PIXELFORMATDESCRIPTOR pfd = { 0, };
   pfd.nSize = sizeof(pfd);
   pfd.nVersion = 1;
@@ -176,11 +106,10 @@ bool GLRender::Init(DX12SharedData* pSharedData)
   BOOL res = SetPixelFormat(hDC, pixelFormat, &pfd);
   assert(res);
   // Create and Bind GL Context
-  hRC = wglCreateContext(hDC);
+  HGLRC hRC = wglCreateContext(hDC);
   assert(hRC);
   res = wglMakeCurrent(hDC, hRC);
   assert(res);
-
   // Create and Bind Debug context
   static const int attributes[] =
   {
@@ -204,8 +133,81 @@ bool GLRender::Init(DX12SharedData* pSharedData)
   assert(res);
 
 #ifdef _DEBUG
-  activateContextDebugging();
+  struct StaticOwner
+  {
+    static void GLAPIENTRY debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
+    {
+      const char* debugSource;
+      switch (source)
+      {
+      case GL_DEBUG_SOURCE_API_ARB: debugSource = "OpenGL"; break;
+      case GL_DEBUG_SOURCE_WINDOW_SYSTEM_ARB: debugSource = "Windows"; break;
+      case GL_DEBUG_SOURCE_SHADER_COMPILER_ARB: debugSource = "Shader Compiler"; break;
+      case GL_DEBUG_SOURCE_THIRD_PARTY_ARB: debugSource = "Third Party"; break;
+      case GL_DEBUG_SOURCE_APPLICATION_ARB: debugSource = "Application"; break;
+      case GL_DEBUG_SOURCE_OTHER_ARB:
+      default:
+        debugSource = "Other";
+      }
+
+      const char* debugType;
+      switch (type)
+      {
+      case GL_DEBUG_TYPE_ERROR_ARB: debugType = "Error"; break;
+      case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB: debugType = "Deprecated behavior"; break;
+      case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB: debugType = "Undefined behavior"; break;
+      case GL_DEBUG_TYPE_PORTABILITY_ARB: debugType = "Portability"; break;
+      case GL_DEBUG_TYPE_PERFORMANCE_ARB: debugType = "Performance"; break;
+      case GL_DEBUG_TYPE_OTHER_ARB:
+      default:
+        debugType = "Other"; break;
+      }
+
+      const char* debugSeverity;
+      switch (severity)
+      {
+      case GL_DEBUG_SEVERITY_HIGH_ARB: debugSeverity = "High"; break;
+      case GL_DEBUG_SEVERITY_MEDIUM_ARB: debugSeverity = "Medium"; break;
+      case GL_DEBUG_SEVERITY_LOW_ARB: debugSeverity = "Low"; break;
+      default:
+        debugSeverity = "Other"; break;
+      }
+
+      std::cerr << debugSource << " " << debugType << " " << debugSeverity << " " << message;
+      if (type == GL_DEBUG_TYPE_ERROR_ARB || type == GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB || type == GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB || type == GL_DEBUG_TYPE_PORTABILITY_ARB)
+        assert_false; // on assert here, see "message" variable content
+    }
+  };
+
+  glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
+  GL_CALL(glDebugMessageControlARB, GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);  // activate all debug output
+  GL_CALL(glDebugMessageCallbackARB, StaticOwner::debugCallback, nullptr);
+#endif _DEBUG
+
+  return hRC;
+}
+
+static void deactivateAndDeleteGLContext(HGLRC hRC)
+{
+  // Disable Debugging
+#ifdef _DEBUG
+  glDisable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
+  GL_CALL(glDebugMessageCallbackARB, nullptr, nullptr);
 #endif // _DEBUG
+  // Unbind and cleanup GL Context
+  BOOL res = wglMakeCurrent(nullptr, nullptr);
+  assert(res);
+  res = wglDeleteContext(hRC);
+  assert(res);
+}
+
+bool GLRender::Init(DX12SharedData* pSharedData)
+{
+  this->pSharedData = pSharedData;
+  hDC = GetDC(pSharedData->hWnd);
+  assert(hDC);
+  hRC = createAndActivateGLContext(hDC);
+  assert(hRC);
 
   const GLubyte* vendor = glGetString(GL_VENDOR);
   std::cout << "Vendor: " << vendor << "\n";
@@ -221,9 +223,9 @@ bool GLRender::Init(DX12SharedData* pSharedData)
 
     GL_CALL(glCreateBuffers, 1, &buffers[i].bufferId);
     GL_CALL(glCreateMemoryObjectsEXT, 1, &buffers[i].memoryObject);
-    
-    GL_CALL(glImportMemoryWin32HandleEXT, buffers[i].memoryObject, pSharedData->width * pSharedData->height * 4/* fixme find dx12 equivalent to vkGetBufferMemoryRequirements or try with Rgba no mipmap hardcoded computing*/, GL_HANDLE_TYPE_D3D12_RESOURCE_EXT, pSharedData->sharedMemHandle[i]);
 
+    const GLuint64 importSize = GLuint64(pSharedData->width) * GLuint64(pSharedData->height) * 4/* RGBAU8 */; /* fixme find dx12 equivalent to vkGetBufferMemoryRequirements? */
+    GL_CALL(glImportMemoryWin32HandleEXT, buffers[i].memoryObject, importSize, GL_HANDLE_TYPE_D3D12_RESOURCE_EXT, pSharedData->sharedMemHandle[i]);
   }
 
   initialized = true;
@@ -241,14 +243,7 @@ void GLRender::Cleanup()
     GL_CALL(glDeleteSemaphoresEXT, 1, &buffers[i].semaphore);
   }
 
-  // Unbind and cleanup GL Context
-#ifdef _DEBUG
-  deactivateContextDebugging();
-#endif // _DEBUG
-  BOOL res = wglMakeCurrent(nullptr, nullptr);
-  assert(res);
-  res = wglDeleteContext(hRC);
-  assert(res);
+  deactivateAndDeleteGLContext(hRC);
   hRC = nullptr;
   // Release device Context
   ReleaseDC(pSharedData->hWnd, hDC);

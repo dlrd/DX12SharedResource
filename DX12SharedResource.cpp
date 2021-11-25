@@ -19,6 +19,9 @@ enum RuntimeMode {
 
 #define MIN_SHARED_BUFFERS   2
 
+#define NEW_RENDERER newGLRender
+//#define NEW_RENDERER newVKRender
+
 class DX12SharedResource
 {
 protected:
@@ -152,7 +155,7 @@ bool DX12SharedResource::Init(HWND hWnd, UINT width, UINT height)
             m_pSharedData = new DX12SharedData;
             InitSharedData(hWnd, width, height);
 
-            m_vkRender = newAbstractRender();
+            m_vkRender = NEW_RENDERER();
             m_dxPresent = new DX12Present();
 
             if (!m_dxPresent->Init(m_pSharedData)) {
@@ -185,7 +188,7 @@ bool DX12SharedResource::Init(HWND hWnd, UINT width, UINT height)
                 return false;
             }
 
-            m_vkRender = newAbstractRender();
+            m_vkRender = NEW_RENDERER();
 
             if (!m_vkRender->Init(m_pSharedData)) {
                 return false;
@@ -538,7 +541,7 @@ static int render()
         assert(pSharedData->sharedFenceHandle[i]);
     }
 
-    auto* vkRender = newAbstractRender();
+    auto* vkRender = NEW_RENDERER();
 
     if (vkRender->Init(pSharedData)) {
         SetEvent(doneEvent);

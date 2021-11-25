@@ -58,8 +58,8 @@ private:
         bool                    rendered;
     } m_buffer[MAX_SHARED_BUFFERS] = { 0, };
 
-    uint32_t m_currentBuffer = 0;
-    uint32_t m_numFrames = 0;
+    //uint32_t m_currentBuffer = 0;
+    //uint32_t m_numFrames = 0;
 
     bool m_initialized = false;
 

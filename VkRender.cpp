@@ -852,8 +852,8 @@ bool VkRender::Init(DX12SharedData* pSharedData)
     lookAt(viewMatrix, eyePos, origin, upVector);
     matrix_multiply(m_viewProjMatrix, projMatrix, viewMatrix);
 
-    m_currentBuffer = 0;
-    m_numFrames = 0;
+    //m_currentBuffer = 0;
+    //m_numFrames = 0;
 
     m_initialized = true;
 
@@ -989,7 +989,7 @@ void VkRender::Render()
     if (!m_initialized)
         return;
 
-    m_currentBuffer = m_pSharedData->currentBufferIndex;
+    uint32_t m_currentBuffer = m_pSharedData->currentBufferIndex;
 
     float angle;
     /*if (m_pSharedData->verify) {
@@ -1049,10 +1049,8 @@ void VkRender::Render()
 
     m_buffer[m_currentBuffer].rendered = true;
 
-    m_numFrames++;
+    //m_numFrames++;
 }
 
-//AbstractRender* newAbstractRender()
-//{
-//  return new VkRender();
-//}
+AbstractRender* newVKRender()
+  {return new VkRender();}

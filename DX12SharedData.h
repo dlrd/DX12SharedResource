@@ -43,6 +43,7 @@ public:
   virtual bool Initialized() = 0;
 };
 
-extern AbstractRender* newAbstractRender();
+extern AbstractRender* newVKRender();
+extern AbstractRender* newGLRender();
 
 #endif // _DX12_SHARED_DATA_H_

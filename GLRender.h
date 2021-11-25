@@ -28,13 +28,15 @@ private:
   {
     GLuint semaphore;
     GLuint memoryObject;
-    GLuint bufferId;
+    GLuint textureId;
+    bool rendered;
   } buffers[MAX_SHARED_BUFFERS] = { 0, };
 
   DX12SharedData* pSharedData = nullptr;
   HGLRC hRC = nullptr;
   HDC hDC = nullptr;
   bool initialized = false;
+  GLuint frameBuffer = 0;
 };
 
 #endif // _GL_RENDER_H_

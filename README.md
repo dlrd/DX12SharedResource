@@ -47,12 +47,16 @@ Please send any questions, comments or bug reports to vrsupport@nvidia.com.
 If submitting a bug report, please note the OS, GPU, driver version, and VR display (HMD).
 We strongly encourage including a system log from the DirectX Diagnostic Tool (dxdiag).
 
-Smode dependencies tree
------------------------
+Smode Tech Fork
+---------------
 
-DX12SharedData <- DXPresent  <-DX12SharedResource
-               <- VkRender
-               <- GLRender
+1) Smode tech introduce AbstractRender class that let VkRender be remplaced by new GLRender.
+2) In DX12SharedResource.cpp line 22 and 23 comment NEW_RENDERER macro according to the wanted Renderer 
 
+Smode Tech Fork Dependencies tree
+---------------------------------
+    DX12SharedData & AbstractRenderer <- DXPresent  <-DX12SharedResource
+                                      <- VkRender
+                                      <- GLRender
 
 

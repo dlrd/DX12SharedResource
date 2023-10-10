@@ -10,9 +10,10 @@
 // platform defines for GL.h
 #define WINGDIAPI __declspec(dllimport)
 #define APIENTRY __stdcall
-
+#include <stdint.h>
 #include <gl/GL.h>
 #include "DX12SharedData.h" // for AbstractRender
+typedef uint64_t GLuint64;
 
 class GLRender : public AbstractRender
 {
@@ -29,6 +30,7 @@ private:
     GLuint semaphore;
     GLuint memoryObject;
     GLuint textureId;
+    GLuint64 semaphoreFenceValue;
     bool rendered;
   } buffers[MAX_SHARED_BUFFERS] = { 0, };
 

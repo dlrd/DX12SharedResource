@@ -227,8 +227,8 @@ bool GLRender::Init(DX12SharedData* pSharedData)
     GLboolean res = GL_NON_VOID_CALL(glIsSemaphoreEXT, buffers[i].semaphore);
     assert(res);
     GL_CALL(glCreateMemoryObjectsEXT, 1, &buffers[i].memoryObject);
-    const GLuint64 importSize = GLuint64(pSharedData->width) * GLuint64(pSharedData->height) * 4/* GL_RGBA8 */; /* fixme find dx12 equivalent to vkGetBufferMemoryRequirements? */
-    GL_CALL(glImportMemoryWin32HandleEXT, buffers[i].memoryObject, importSize, GL_HANDLE_TYPE_D3D12_RESOURCE_EXT, pSharedData->sharedMemHandle[i]);
+    //const GLuint64 importSize = GLuint64(pSharedData->width) * GLuint64(pSharedData->height) * 4/* GL_RGBA8 */; /* fixme find dx12 equivalent to vkGetBufferMemoryRequirements? */
+    GL_CALL(glImportMemoryWin32HandleEXT, buffers[i].memoryObject, 0, GL_HANDLE_TYPE_D3D12_RESOURCE_EXT, pSharedData->sharedMemHandle[i]);
     GL_CALL(glCreateTextures, GL_TEXTURE_2D, 1, &buffers[i].textureId);
     GL_CALL(glTextureStorageMem2DEXT, buffers[i].textureId, 1, GL_RGBA8, pSharedData->width, pSharedData->height, buffers[i].memoryObject, 0 /* fixme maybe not 0 offset on DX12 texture? */);
     GL_CALL(glTextureParameteri, buffers[i].textureId, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -284,12 +284,15 @@ void GLRender::Render()
 {
   const uint32_t currentBuffer = pSharedData->currentBufferIndex;
   
-  // try lock texture cross api race condition
-  //if (buffers[currentBuffer].rendered)
-  //{
-  //  GLenum srcLayout = GL_LAYOUT_COLOR_ATTACHMENT_EXT;
-  //  GL_CALL(glWaitSemaphoreEXT, buffers[currentBuffer].semaphore, 0, nullptr, 1, &buffers[currentBuffer].textureId, &srcLayout);
-  //}
+  const GLuint64 waitFence = (GLuint64)buffers[currentBuffer].semaphoreFenceValue;
+  const GLuint64 signalFence = waitFence + 1;
+  
+  buffers[currentBuffer].semaphoreFenceValue += 2;
+  
+  GL_CALL(glSemaphoreParameterui64vEXT, buffers[currentBuffer].semaphore, GL_D3D12_FENCE_VALUE_EXT, &waitFence);
+  
+  GLenum srcLayout = GL_LAYOUT_COLOR_ATTACHMENT_EXT;
+  GL_CALL(glWaitSemaphoreEXT, buffers[currentBuffer].semaphore, 0, nullptr, 1, &buffers[currentBuffer].textureId, &srcLayout);
   
   // fill texture thanks to framebuffer renderer technics
   GL_CALL(glBindFramebuffer, GL_DRAW_FRAMEBUFFER, frameBuffer);
@@ -309,11 +312,10 @@ void GLRender::Render()
   //GL_CALL(glTextureSubImage2D, buffers[currentBuffer].textureId, 0, 0, 0, pSharedData->width, pSharedData->height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
   //delete pixels;
 
-  GL_CALL(glGenerateTextureMipmap, buffers[currentBuffer].textureId);
+  //GL_CALL(glGenerateTextureMipmap, buffers[currentBuffer].textureId);
 
-  // try unlock texture cross api race condition
-  //GLenum srcLayout = GL_LAYOUT_COLOR_ATTACHMENT_EXT;
-  //GL_CALL(glSignalSemaphoreEXT, buffers[currentBuffer].semaphore, 0, nullptr, 1, &buffers[currentBuffer].textureId, &srcLayout);
+  GL_CALL(glSemaphoreParameterui64vEXT, buffers[currentBuffer].semaphore, GL_D3D12_FENCE_VALUE_EXT, &signalFence);
+  GL_CALL(glSignalSemaphoreEXT, buffers[currentBuffer].semaphore, 0, nullptr, 1, &buffers[currentBuffer].textureId, &srcLayout);
 
   buffers[currentBuffer].rendered = true;
 }

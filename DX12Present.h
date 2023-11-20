@@ -55,6 +55,8 @@ private:
     UINT                                m_frameIndex;
     UINT                                m_numFrames;
     bool                                m_initialized;
+    ID3D12Debug* debugController = nullptr;
+    ID3D12Debug1* debugController1 = nullptr;
 };
 
 #endif // _DX12_PRESENT_H_

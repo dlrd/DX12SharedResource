@@ -257,7 +257,7 @@ void GLRender::Cleanup()
     checkGLErrors();
     GL_CALL(glDeleteMemoryObjectsEXT, 1, &buffers[i].memoryObject);
     GL_CALL(glDeleteSemaphoresEXT, 1, &buffers[i].semaphore);
-  }
+  } 
   // delete gl context
   deactivateAndDeleteGLContext(hRC);
   hRC = nullptr;
@@ -284,37 +284,24 @@ void GLRender::Render()
 {
   const uint32_t currentBuffer = pSharedData->currentBufferIndex;
   
-  const GLuint64 waitFence = (GLuint64)buffers[currentBuffer].semaphoreFenceValue;
-  const GLuint64 signalFence = waitFence + 1;
-  
-  buffers[currentBuffer].semaphoreFenceValue += 2;
-  
-  GL_CALL(glSemaphoreParameterui64vEXT, buffers[currentBuffer].semaphore, GL_D3D12_FENCE_VALUE_EXT, &waitFence);
-  
   GLenum srcLayout = GL_LAYOUT_COLOR_ATTACHMENT_EXT;
+  GL_CALL(glSemaphoreParameterui64vEXT, buffers[currentBuffer].semaphore, GL_D3D12_FENCE_VALUE_EXT, &buffers[currentBuffer].semaphoreFenceValue);
   GL_CALL(glWaitSemaphoreEXT, buffers[currentBuffer].semaphore, 0, nullptr, 1, &buffers[currentBuffer].textureId, &srcLayout);
   
   // fill texture thanks to framebuffer renderer technics
   GL_CALL(glBindFramebuffer, GL_DRAW_FRAMEBUFFER, frameBuffer);
   GL_CALL(glFramebufferTexture2D, GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, buffers[currentBuffer].textureId, 0);
+  
   checkFrameBufferStatus(GL_DRAW_FRAMEBUFFER);
   glViewport(0, 0, pSharedData->width, pSharedData->height);
   checkGLErrors();
 
   paintIntoCurrentDrawFramebuffer();
-
+  buffers[currentBuffer].semaphoreFenceValue++;
+  buffers[currentBuffer].semaphoreFenceValue++;
+  std::cout << buffers[currentBuffer].semaphoreFenceValue << std::endl; 
   GL_CALL(glBindFramebuffer, GL_DRAW_FRAMEBUFFER, 0);
-
-  // fill texture via ram to vram upload
-  //size_t imageSizeInBytes = pSharedData->width * pSharedData->height * 4;
-  //char* pixels = new char[imageSizeInBytes];
-  //memset(pixels, 0xffffffff, imageSizeInBytes);
-  //GL_CALL(glTextureSubImage2D, buffers[currentBuffer].textureId, 0, 0, 0, pSharedData->width, pSharedData->height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-  //delete pixels;
-
-  //GL_CALL(glGenerateTextureMipmap, buffers[currentBuffer].textureId);
-
-  GL_CALL(glSemaphoreParameterui64vEXT, buffers[currentBuffer].semaphore, GL_D3D12_FENCE_VALUE_EXT, &signalFence);
+  GL_CALL(glSemaphoreParameterui64vEXT, buffers[currentBuffer].semaphore, GL_D3D12_FENCE_VALUE_EXT, &buffers[currentBuffer].semaphoreFenceValue);
   GL_CALL(glSignalSemaphoreEXT, buffers[currentBuffer].semaphore, 0, nullptr, 1, &buffers[currentBuffer].textureId, &srcLayout);
 
   buffers[currentBuffer].rendered = true;

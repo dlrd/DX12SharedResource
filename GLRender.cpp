@@ -11,7 +11,8 @@
 #include "GLExtensions.h"
 #include "WGLExtensions.h"
 #include <iostream>
-
+#include <set>
+#define GL_NUM_EXTENSIONS 0x821D
 /* ---------------------- Micro GL Wrangler ---------------- */
 
 static bool hasGLErrorOccurred(GLenum expectedError, bool silentAssert = false )
@@ -211,6 +212,7 @@ static bool checkFrameBufferStatus(GLenum target)
 
 bool GLRender::Init(DX12SharedData* pSharedData)
 {
+  typedef const GLubyte* (WINAPI*PFNglGetStringi) (GLenum name, GLuint index);
   // create gl context
   this->pSharedData = pSharedData;
   hDC = GetDC(pSharedData->hWnd);
@@ -219,6 +221,23 @@ bool GLRender::Init(DX12SharedData* pSharedData)
   assert(hRC);
   const GLubyte* vendor = glGetString(GL_VENDOR);
   std::cout << "Vendor: " << vendor << "\n";
+
+  GLint no_of_extensions = 0;
+  glGetIntegerv(GL_NUM_EXTENSIONS, &no_of_extensions);
+  std::set<std::string> ogl_extensions;
+  for (int i = 0; i < no_of_extensions; ++i)
+  {
+    const GLubyte* ext = GL_NON_VOID_CALL(glGetStringi, GL_EXTENSIONS, i);
+    ogl_extensions.emplace(reinterpret_cast<const char*>(ext));
+  }
+
+  bool memory_object_supported = ogl_extensions.find("GL_EXT_memory_object") != ogl_extensions.end();
+  bool semaphore_supported = ogl_extensions.find("GL_EXT_semaphore") != ogl_extensions.end();
+  if (!memory_object_supported || !semaphore_supported)
+  {
+    std::cerr << "semaphore_supported: " << semaphore_supported << ", memory_object_supported: " << memory_object_supported << '\n';
+    return false;
+  }
   // share objects
   for (UINT i = 0; i < pSharedData->numSharedBuffers; ++i)
   {

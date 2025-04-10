@@ -233,9 +233,12 @@ bool GLRender::Init(DX12SharedData* pSharedData)
 
   bool memory_object_supported = ogl_extensions.find("GL_EXT_memory_object") != ogl_extensions.end();
   bool semaphore_supported = ogl_extensions.find("GL_EXT_semaphore") != ogl_extensions.end();
+  bool memory_win32_object_supported = ogl_extensions.find("GL_EXT_memory_object_win32") != ogl_extensions.end();
+  bool semaphore_win32_supported = ogl_extensions.find("GL_EXT_semaphore_win32") != ogl_extensions.end();
   if (!memory_object_supported || !semaphore_supported)
   {
     std::cerr << "semaphore_supported: " << semaphore_supported << ", memory_object_supported: " << memory_object_supported << '\n';
+    std::cerr << "memory_win32_object_supported: " << memory_win32_object_supported << ", semaphore_win32_supported: " << semaphore_win32_supported << '\n';
     return false;
   }
   // share objects

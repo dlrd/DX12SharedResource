@@ -62,7 +62,8 @@ bool DX12Present::Init(DX12SharedData* pSharedData)
             continue;
         }
 
-        if (adapterDesc.VendorId == NVIDIA_VENDOR_ID) {
+        //if (adapterDesc.VendorId == NVIDIA_VENDOR_ID)
+        {
             foundNvDevice = true;
             m_pSharedData->AdapterLuid = adapterDesc.AdapterLuid;
             break;

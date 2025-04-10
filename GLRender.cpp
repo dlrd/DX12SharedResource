@@ -220,7 +220,9 @@ bool GLRender::Init(DX12SharedData* pSharedData)
   hRC = createAndActivateGLContext(hDC);
   assert(hRC);
   const GLubyte* vendor = glGetString(GL_VENDOR);
-  std::cout << "Vendor: " << vendor << "\n";
+  if (vendor)
+    std::cout << "Vendor: " << vendor << "\n";
+  else std::cout << "Unknown vendor\n";
 
   GLint no_of_extensions = 0;
   glGetIntegerv(GL_NUM_EXTENSIONS, &no_of_extensions);
